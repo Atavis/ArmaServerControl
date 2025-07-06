@@ -7,6 +7,8 @@ _serverDir = r'C:\Server\tactical_life\dev_server'
 _backupDir = r'C:\backup'
 create_folder(r'C:\\', 'backup')
 
+_print = create_folder(_backupDir, getDateTime())
+print(_print)
 
 # Profile settings
 _profileName = '!ATVProfile'
