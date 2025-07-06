@@ -3,18 +3,27 @@ import datetime
 import shutil
 import os
 from pathlib import Path
+import stat
 
 def create_folder(parent_dir, folder_name):
-    """
-    Создаёт папку с именем folder_name в директории parent_dir.
-    Если папка уже существует, ничего не делает.
-    Возвращает объект Path с полным путём к папке.
-    """
-    parent_path = Path(parent_dir)
-    folder_path = parent_path / folder_name
-    if not folder_path.exists():
-        folder_path.mkdir(parents=True)
+    folder_path = os.path.join(parent_dir, folder_name)
+    
+    os.makedirs(folder_path, exist_ok=True)
+    
+    cmd = ['icacls', folder_path, '/grant', 'Все:(OI)(CI)F', '/T']
+    
+    # Указываем encoding='cp866' для корректного чтения вывода в русской консоли Windows
+    subprocess.run(cmd, capture_output=True, text=True, encoding='cp866')
+    
     return folder_path
+
+def remove_folder(path):
+    cmd = ['rmdir', '/S', '/Q', path]
+    result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+    if result.returncode == 0:
+        print(f"Папка {path} успешно удалена")
+    else:
+        print(f"Ошибка при удалении папки: {result.stderr}")
 
 def getDateTime():
     _timeNow = datetime.datetime.now()
@@ -50,58 +59,39 @@ def copy_folder(_sourceDir, _saveDir, _saveFolder):
     shutil.copytree(source_folder, destination_folder)
     print(f"Папка '{source_folder}' успешно скопирована в '{destination_folder}'")
     
-def backup_mysql_database(username, password, database_name, backup_dir, mysql_path):
-    """
-    Создает дамп базы данных MySQL с использованием mysqldump, включая функции.
+def dump_mysql_db(user, host, db_name, mysqldump_path, dump_dir):
+    if not os.path.exists(mysqldump_path):
+        raise FileNotFoundError(f"mysqldump не найден по пути {mysqldump_path}")
 
-    Args:
-        username: Имя пользователя MySQL.
-        password: Пароль пользователя MySQL.
-        database_name: Имя базы данных для резервного копирования.
-        backup_dir: Каталог, в котором будут храниться резервные копии.
-        mysql_path: Путь к исполняемому файлу mysqldump (mysqldump.exe) в OpenServer.
-    """
-    try:
-        now = datetime.datetime.now()
-        backup_file = os.path.join(backup_dir, f"{database_name}_{now.strftime('%Y%m%d_%H%M%S')}.sql")
+    os.makedirs(dump_dir, exist_ok=True)
+    output_file = os.path.join(dump_dir, f"{db_name}.sql")
 
-        # Команда mysqldump
-        command = [
-            mysql_path,  # Укажите полный путь к mysqldump.exe
-            "-u", username
-            ]
-        if password: # Добавляем пароль только если он есть
-            command.append(f"-p{password}")
-        command.extend([ # Добавляем остальные аргументы
-            "--compact",            
-            "--routines",      # Включаем дампинг хранимых процедур и функций
-            database_name
-        ])
+    command = [
+        mysqldump_path,
+        f'-u{user}',
+        f'-h{host}',
+        '--routines',
+        '--single-transaction',
+        db_name
+    ]
 
-        # Выполнение команды и перенаправление вывода в файл
-        with open(backup_file, "w", encoding="utf-8") as outfile:  # Открываем файл для записи
-            process = subprocess.Popen(command, stdout=outfile, stderr=subprocess.PIPE)
-            _, stderr = process.communicate() # Получаем stdout и stderr
+    with open(output_file, 'w', encoding='utf-8') as f:
+        result = subprocess.run(command, stdout=f, stderr=subprocess.PIPE, text=True)
 
-        if process.returncode != 0:
-            print(f"Ошибка при создании резервной копии (код ошибки: {process.returncode}):")
-            if stderr:
-                print(f"Сообщение об ошибке:\n{stderr.decode('utf-8')}")
-            raise subprocess.CalledProcessError(process.returncode, command, stderr=stderr)
-
-        print(f"Резервная копия базы данных '{database_name}' успешно создана (включая функции): {backup_file}")
-
-    except subprocess.CalledProcessError as e:
-        print(f"Ошибка при создании резервной копии: {e}")
-    except Exception as e:
-        print(f"Произошла непредвиденная ошибка: {e}")
-
-
-# Пример использования:
-username = "root"  # Замените на ваше имя пользователя MySQL
-password = ""      # Замените на ваш пароль MySQL (или оставьте пустым для интерактивного ввода)
-database_name = "tactical_life"  # Замените на имя вашей базы данных
-backup_dir = r"C:\backup"  # Замените на путь к каталогу для резервных копий. Обязательно создайте эту папку.
-mysql_path = r"C:\Влад\Игры\Arma 3\OpenServer\modules\database\MySQL-5.7\bin\mysqldump.exe" #  Замените на реальный путь к mysqldump.exe
-
-backup_mysql_database(username, password, database_name, backup_dir, mysql_path)
+    if result.returncode == 0:
+        print(f"Дамп базы '{db_name}' успешно сохранён в '{output_file}'")
+    else:
+        print(f"Ошибка при создании дампа:\n{result.stderr}")
+          
+def remove_files_with_extensions(folder_path, extensions):
+    extensions = [ext.lower() for ext in extensions]  # для надёжности
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        if os.path.isfile(file_path):
+            _, ext = os.path.splitext(filename)
+            if ext.lower() in extensions:
+                try:
+                    os.remove(file_path)
+                    print(f"Удалён файл: {file_path}")
+                except Exception as e:
+                    print(f"Ошибка при удалении файла {file_path}: {e}")
