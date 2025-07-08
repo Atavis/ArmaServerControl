@@ -1,3 +1,5 @@
+# Set-ExecutionPolicy Unrestricted -Force
+
 from menu import main_menu
 from utils import getDateTime, delete_folder, create_folder, copy_folder, dump_mysql_db, remove_folder, remove_files_with_extensions
 import shutil
