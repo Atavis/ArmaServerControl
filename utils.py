@@ -4,6 +4,7 @@ import shutil
 import os
 from pathlib import Path
 import stat
+import hashlib
 
 def create_folder(parent_dir, folder_name):
     folder_path = os.path.join(parent_dir, folder_name)
@@ -49,7 +50,7 @@ def archive_directory(_dir, _dirSave):
         shutil.make_archive(os.path.splitext(_dirSave)[0], 'zip', _dir)  # Создает архив без расширения .zip
         print(f"Каталог '{_dir}' успешно заархивирован в '{_dirSave}'")
     except Exception as e:
-        print(f"Ошибка при архивировании каталога: {e}")        
+        print(f"Ошибка при архивировании каталога: {e}")
         
 def copy_folder(_sourceDir, _saveDir, _saveFolder):
     """ Копирует папку !ATVProfile в новое место."""
@@ -95,3 +96,22 @@ def remove_files_with_extensions(folder_path, extensions):
                     print(f"Удалён файл: {file_path}")
                 except Exception as e:
                     print(f"Ошибка при удалении файла {file_path}: {e}")
+                    
+
+
+def steamid_to_md5(steam_id_str):
+    # Конвертируем строку SteamID в число
+    steam_id = int(steam_id_str)
+    
+    # Создаем объект для хранения байтов
+    byte_array = b'BE'  # Префикс 'BE'
+    
+    # Обрабатываем младшие байты SteamID
+    for _ in range(8):
+        byte = steam_id & 0xFF
+        byte_array += bytes([byte])
+        steam_id >>= 8
+    
+    # Вычисляем MD5-хеш
+    md5_hash = hashlib.md5(byte_array).hexdigest()
+    return md5_hash
