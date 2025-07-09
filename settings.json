@@ -1,0 +1,18 @@
+{
+    "server": {
+        "dir": "E:\\tactical_life\\dev_server",
+        "dir_backups": "C:\\backups"
+    },
+    "profile": {
+        "name": "!ATVProfile",
+        "filter_files": [".log", ".rpt"],
+        "filter_folders": ["Users"]
+    },
+    "extdb": {
+        "name": "@TLS",
+        "filter_files": [".log"]
+    },
+    "mysql": {
+        "dir": "E:\\OpenServer\\modules\\database\\MySQL-5.7\\bin\\mysqldump.exe"
+    }
+}

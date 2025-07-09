@@ -3,7 +3,6 @@ import datetime
 import shutil
 import os
 from pathlib import Path
-import stat
 import hashlib
 
 def create_folder(parent_dir, folder_name):
@@ -44,13 +43,12 @@ def delete_folder(_dir, _filterFolders):
                 print(f"Ошибка при удалении {item_path}: {e}")
 
 def archive_directory(_dir, _dirSave):
-    """Архивирует каталог в ZIP-файл. """
-
-    try:
-        shutil.make_archive(os.path.splitext(_dirSave)[0], 'zip', _dir)  # Создает архив без расширения .zip
-        print(f"Каталог '{_dir}' успешно заархивирован в '{_dirSave}'")
-    except Exception as e:
-        print(f"Ошибка при архивировании каталога: {e}")
+    shutil.make_archive(
+        base_name=_dir,
+        format='zip',
+        root_dir=_dirSave,
+        base_dir=os.path.basename(_dir)
+    )
         
 def copy_folder(_sourceDir, _saveDir, _saveFolder):
     """ Копирует папку !ATVProfile в новое место."""
@@ -85,20 +83,21 @@ def dump_mysql_db(user, host, db_name, mysqldump_path, dump_dir):
         print(f"Ошибка при создании дампа:\n{result.stderr}")
           
 def remove_files_with_extensions(folder_path, extensions):
-    extensions = [ext.lower() for ext in extensions]  # для надёжности
+    extensions = [ext.lower() for ext in extensions]
+    print(f"Путь: {folder_path}")
+    print(f"Расширения для удаления: {extensions}")
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
         if os.path.isfile(file_path):
+            print(f"Обрабатываем файл: {filename}")
             _, ext = os.path.splitext(filename)
             if ext.lower() in extensions:
                 try:
                     os.remove(file_path)
                     print(f"Удалён файл: {file_path}")
                 except Exception as e:
-                    print(f"Ошибка при удалении файла {file_path}: {e}")
+                    print(f"Ошибка при удалении {file_path}: {e}")
                     
-
-
 def steamid_to_md5(steam_id_str):
     # Конвертируем строку SteamID в число
     steam_id = int(steam_id_str)
@@ -115,3 +114,24 @@ def steamid_to_md5(steam_id_str):
     # Вычисляем MD5-хеш
     md5_hash = hashlib.md5(byte_array).hexdigest()
     return md5_hash
+
+def find_log_files(_dir, _extensions):
+    matched_files = []
+    for dirpath, dirnames, filenames in os.walk(_dir):
+        for filename in filenames:
+            if any(filename.endswith(ext) for ext in _extensions):
+                full_path = os.path.join(dirpath, filename)
+                matched_files.append(full_path)
+    return matched_files
+
+def copy_files(_filesList, _dirSave):
+    if not os.path.exists(_dirSave):
+        os.makedirs(_dirSave)
+    for file_path in _filesList:
+        if os.path.isfile(file_path):
+            filename = os.path.basename(file_path)
+            destination = os.path.join(_dirSave, filename)
+            shutil.copy2(file_path, destination)
+            print(f"Скопирован {file_path} в {destination}")
+        else:
+            print(f"Файл не найден: {file_path}")
